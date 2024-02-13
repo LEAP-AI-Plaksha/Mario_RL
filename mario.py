@@ -17,10 +17,14 @@ from torchrl.data import TensorDictReplayBuffer, LazyMemmapStorage
 import numpy as np
 import time, datetime
 import matplotlib.pyplot as plt
-use_cuda = torch.cuda.is_available()
-print(f"Using CUDA: {use_cuda}")
+import platform
 
-env = gym_super_mario_bros.make('SuperMarioBros-v0',apply_api_compatibility=True,render_mode="human" )
+use_mps = torch.backends.mps.is_available()
+print(f"Using MPS: {use_mps}")
+
+env = gym_super_mario_bros.make(
+    "SuperMarioBros-v0", apply_api_compatibility=True, render_mode="human"
+)
 env = JoypadSpace(env, SIMPLE_MOVEMENT)
 
 
@@ -56,11 +60,7 @@ class GrayScaleObservation(gym.ObservationWrapper):
 
     def observation(self, observation):
         observation = self.permute_orientation(observation)
-        transform = T.Compose([
-            T.ToPILImage(),
-            T.Grayscale(),
-            T.ToTensor()
-        ])
+        transform = T.Compose([T.ToPILImage(), T.Grayscale(), T.ToTensor()])
         observation = transform(observation)
         return observation
 
@@ -78,9 +78,9 @@ class ResizeObservation(gym.ObservationWrapper):
 
     def observation(self, observation):
         transform = T.Compose(
-            [T.ToPILImage(),T.Resize(self.shape),T.ToTensor(), T.Normalize(0, 255)]
+            [T.ToPILImage(), T.Resize(self.shape), T.ToTensor(), T.Normalize(0, 255)]
         )
-        observation =transform(observation).squeeze(0)
+        observation = transform(observation).squeeze(0)
         return observation
 
 
@@ -88,20 +88,19 @@ class ResizeObservation(gym.ObservationWrapper):
 env = SkipFrame(env, skip=4)
 env = GrayScaleObservation(env)
 env = ResizeObservation(env, shape=84)
-if gym.__version__ < '0.26':
+if gym.__version__ < "0.26":
     env = FrameStack(env, num_stack=4, new_step_api=True)
 else:
     env = FrameStack(env, num_stack=4)
-    
-    
-    
+
+
 class Mario:
     def __init__(self, state_dim, action_dim, save_dir):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.save_dir = save_dir
 
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "mps" if use_mps else "cpu"
 
         # Mario's DNN to predict the most optimal action - we implement this in the Learn section
         self.net = MarioNet(self.state_dim, self.action_dim).float()
@@ -116,20 +115,22 @@ class Mario:
 
     def act(self, state):
         """
-    Given a state, choose an epsilon-greedy action and update value of step.
+        Given a state, choose an epsilon-greedy action and update value of step.
 
-    Inputs:
-    state(``LazyFrame``): A single observation of the current state, dimension is (state_dim)
-    Outputs:
-    ``action_idx`` (``int``): An integer representing which action Mario will perform
-    """
+        Inputs:
+        state(``LazyFrame``): A single observation of the current state, dimension is (state_dim)
+        Outputs:
+        ``action_idx`` (``int``): An integer representing which action Mario will perform
+        """
         # EXPLORE
         if np.random.rand() < self.exploration_rate:
             action_idx = np.random.randint(self.action_dim)
 
         # EXPLOIT
         else:
-            state = state[0].__array__() if isinstance(state, tuple) else state.__array__()
+            state = (
+                state[0].__array__() if isinstance(state, tuple) else state.__array__()
+            )
             state = torch.tensor(state, device=self.device).unsqueeze(0)
             action_values = self.net(state, model="online")
             action_idx = torch.argmax(action_values, axis=1).item()
@@ -141,11 +142,14 @@ class Mario:
         # increment step
         self.curr_step += 1
         return action_idx
-    
+
+
 class Mario(Mario):  # subclassing for continuity
     def __init__(self, state_dim, action_dim, save_dir):
         super().__init__(state_dim, action_dim, save_dir)
-        self.memory = TensorDictReplayBuffer(storage=LazyMemmapStorage(100000, device=torch.device("cpu")))
+        self.memory = TensorDictReplayBuffer(
+            storage=LazyMemmapStorage(100000, device=torch.device("mps"))
+        )
         self.batch_size = 32
 
     def cache(self, state, next_state, action, reward, done):
@@ -159,8 +163,10 @@ class Mario(Mario):  # subclassing for continuity
         reward (``float``),
         done(``bool``))
         """
+
         def first_if_tuple(x):
             return x[0] if isinstance(x, tuple) else x
+
         state = first_if_tuple(state).__array__()
         next_state = first_if_tuple(next_state).__array__()
 
@@ -171,15 +177,30 @@ class Mario(Mario):  # subclassing for continuity
         done = torch.tensor([done])
 
         # self.memory.append((state, next_state, action, reward, done,))
-        self.memory.add(TensorDict({"state": state, "next_state": next_state, "action": action, "reward": reward, "done": done}, batch_size=[]))
+        self.memory.add(
+            TensorDict(
+                {
+                    "state": state,
+                    "next_state": next_state,
+                    "action": action,
+                    "reward": reward,
+                    "done": done,
+                },
+                batch_size=[],
+            )
+        )
 
     def recall(self):
         """
         Retrieve a batch of experiences from memory
         """
         batch = self.memory.sample(self.batch_size).to(self.device)
-        state, next_state, action, reward, done = (batch.get(key) for key in ("state", "next_state", "action", "reward", "done"))
+        state, next_state, action, reward, done = (
+            batch.get(key)
+            for key in ("state", "next_state", "action", "reward", "done")
+        )
         return state, next_state, action.squeeze(), reward.squeeze(), done.squeeze()
+
 
 class Mario(Mario):
     def __init__(self, state_dim, action_dim, save_dir):
@@ -201,6 +222,7 @@ class Mario(Mario):
         ]
         return (reward + (1 - done.float()) * self.gamma * next_Q).float()
 
+
 class Mario(Mario):
     def __init__(self, state_dim, action_dim, save_dir):
         super().__init__(state_dim, action_dim, save_dir)
@@ -217,6 +239,7 @@ class Mario(Mario):
     def sync_Q_target(self):
         self.net.target.load_state_dict(self.net.online.state_dict())
 
+
 class Mario(Mario):
     def save(self):
         save_path = (
@@ -227,7 +250,8 @@ class Mario(Mario):
             save_path,
         )
         print(f"MarioNet saved to {save_path} at step {self.curr_step}")
- 
+
+
 class Mario(Mario):
     def __init__(self, state_dim, action_dim, save_dir):
         super().__init__(state_dim, action_dim, save_dir)
@@ -260,12 +284,13 @@ class Mario(Mario):
         # Backpropagate loss through Q_online
         loss = self.update_Q_online(td_est, td_tgt)
 
-        return (td_est.mean().item(), loss)               
+        return (td_est.mean().item(), loss)
+
 
 class MarioNet(nn.Module):
     """mini CNN structure
-  input -> (conv2d + relu) x 3 -> flatten -> (dense + relu) x 2 -> output
-  """
+    input -> (conv2d + relu) x 3 -> flatten -> (dense + relu) x 2 -> output
+    """
 
     def __init__(self, input_dim, output_dim):
         super().__init__()
@@ -304,7 +329,8 @@ class MarioNet(nn.Module):
             nn.ReLU(),
             nn.Linear(512, output_dim),
         )
-        
+
+
 class MetricLogger:
     def __init__(self, save_dir):
         self.save_log = save_dir / "log"
@@ -403,10 +429,13 @@ class MetricLogger:
 
         for metric in ["ep_lengths", "ep_avg_losses", "ep_avg_qs", "ep_rewards"]:
             plt.clf()
-            plt.plot(getattr(self, f"moving_avg_{metric}"), label=f"moving_avg_{metric}")
+            plt.plot(
+                getattr(self, f"moving_avg_{metric}"), label=f"moving_avg_{metric}"
+            )
             plt.legend()
             plt.savefig(getattr(self, f"{metric}_plot"))
-            
+
+
 save_dir = Path("checkpoints") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 save_dir.mkdir(parents=True)
 
@@ -424,6 +453,7 @@ for e in range(episodes):
         state = next_state
         if done or info["flag_get"]:
             break
+        env.render()
     logger.log_episode()
     if (e % 20 == 0) or (e == episodes - 1):
         logger.record(episode=e, epsilon=mario.exploration_rate, step=mario.curr_step)
