@@ -23,7 +23,7 @@ use_mps = torch.backends.mps.is_available()
 print(f"Using MPS: {use_mps}")
 
 env = gym_super_mario_bros.make(
-    "SuperMarioBros-v0", apply_api_compatibility=True, render_mode="human"
+    "SuperMarioBros-v0", apply_api_compatibility=True, render_mode="rgb_array"
 )
 env = JoypadSpace(env, SIMPLE_MOVEMENT)
 
@@ -101,7 +101,7 @@ class Mario:
         self.save_dir = save_dir
 
         self.device = "mps" if use_mps else "cpu"
-
+        print(self.device)
         # Mario's DNN to predict the most optimal action - we implement this in the Learn section
         self.net = MarioNet(self.state_dim, self.action_dim).float()
         self.net = self.net.to(device=self.device)
@@ -441,7 +441,7 @@ save_dir.mkdir(parents=True)
 
 mario = Mario(state_dim=(4, 84, 84), action_dim=env.action_space.n, save_dir=save_dir)
 logger = MetricLogger(save_dir)
-episodes = 40
+episodes = 40000
 for e in range(episodes):
     state = env.reset()
     while True:
@@ -453,7 +453,7 @@ for e in range(episodes):
         state = next_state
         if done or info["flag_get"]:
             break
-        env.render()
+       #  env.render() # remove to stop rendering
     logger.log_episode()
     if (e % 20 == 0) or (e == episodes - 1):
         logger.record(episode=e, epsilon=mario.exploration_rate, step=mario.curr_step)
