@@ -111,7 +111,7 @@ class Mario:
         self.exploration_rate_min = 0.1
         self.curr_step = 0
 
-        self.save_every = 5e5  # no. of experiences between saving Mario Net
+        self.save_every = 1e5  # no. of experiences between saving Mario Net
 
     def act(self, state):
         """
@@ -253,7 +253,7 @@ class Mario(Mario):
 
 
 class Mario(Mario):
-    def __init__(self, state_dim, action_dim, save_dir):
+    def __init__(self, state_dim, action_dim, save_dir, checkpoint=None):
         super().__init__(state_dim, action_dim, save_dir)
         self.burnin = 1e4  # min. experiences before training
         self.learn_every = 3  # no. of experiences between updates to Q_online
