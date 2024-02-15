@@ -3,7 +3,7 @@ from pathlib import Path
 import gym
 
 import gym_super_mario_bros
-from gym_super_mario_bros.actions import SIMPLE_MOVEMENT
+from gym_super_mario_bros.actions import RIGHT_ONLY
 from gym.wrappers import FrameStack, GrayScaleObservation, TransformObservation
 from nes_py.wrappers import JoypadSpace
 
@@ -11,7 +11,7 @@ from mario_2 import Mario, MetricLogger, ResizeObservation, SkipFrame
 
 env = gym_super_mario_bros.make('SuperMarioBros-v0',  apply_api_compatibility=True, render_mode='human')
 
-env = JoypadSpace(env, SIMPLE_MOVEMENT)
+env = JoypadSpace(env, RIGHT_ONLY)
 
 env = SkipFrame(env, skip=4)
 env = GrayScaleObservation(env, keep_dim=False)
@@ -29,7 +29,7 @@ env.reset()
 save_dir = Path('checkpoints') / datetime.datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
 save_dir.mkdir(parents=True)
 
-checkpoint = Path('checkpoints/2024-02-13T10-38-49/mario_net_49.chkpt')
+checkpoint = Path('checkpoints/2024-02-14T01-31-21/mario_net_complexmovement_16.chkpt')
 mario = Mario(state_dim=(4, 84, 84), action_dim=env.action_space.n, save_dir=save_dir, checkpoint=checkpoint)
 mario.exploration_rate = mario.exploration_rate_min
 
