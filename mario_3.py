@@ -598,7 +598,7 @@ class MetricLogger:
 save_dir = Path("checkpoints") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 save_dir.mkdir(parents=True)
 
-chkpte = Path(f"checkpoints/2024-02-14T01-19-38/mario_net_complexmovement_34.chkpt")
+chkpte = Path(f"checkpoints/2024-02-14T19-25-56/mario_net_complexmovement_62.chkpt")
 mario = Mario(
     state_dim=(4, 84, 84),
     action_dim=env.action_space.n,
@@ -606,7 +606,7 @@ mario = Mario(
     checkpoint=chkpte,
 )
 logger = MetricLogger(save_dir)
-episodes = 25000
+episodes = 40000
 for e in range(episodes):
     state = env.reset()
     while True:
