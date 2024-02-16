@@ -26,7 +26,7 @@ class Mario:
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.memory =  TensorDictReplayBuffer(
-            storage=LazyMemmapStorage(100000, device=torch.device("mps"))
+            storage=LazyMemmapStorage(100000, device=torch.device("cpu"))
         )
         self.batch_size = 32
 
@@ -43,12 +43,12 @@ class Mario:
         self.save_every = 1e5   # no. of experiences between saving Mario Net
         self.save_dir = save_dir
 
-        self.use_mps = torch.backends.mps.is_available()
+        self.use_cuda = torch.cuda.is_available()
 
         # Mario's DNN to predict the most optimal action - we implement this in the Learn section
         self.net = MarioNet(self.state_dim, self.action_dim).float()
-        if self.use_mps:
-            self.net = self.net.to(device='mps')
+        if self.use_cuda:
+            self.net = self.net.to(device='cuda')
         if checkpoint:
             print("LOADED FROM CHECKPOINT")
             self.load(checkpoint)
@@ -76,7 +76,7 @@ class Mario:
             state = (
                 state[0].__array__() if isinstance(state, tuple) else state.__array__()
             )
-            state = torch.tensor(state, device="mps").unsqueeze(0)
+            state = torch.tensor(state, device=("cuda" if self.use_cuda else "cpu")).unsqueeze(0)
             action_values = self.net(state, model="online")
             action_idx = torch.argmax(action_values, axis=1).item()
 
@@ -204,7 +204,7 @@ class Mario:
         if not load_path.exists():
             raise ValueError(f"{load_path} does not exist")
 
-        ckp = torch.load(load_path, map_location=('mps' if self.use_mps else 'cpu'))
+        ckp = torch.load(load_path, map_location=('cuda' if self.use_cuda else 'cpu'))
         exploration_rate = ckp.get('exploration_rate')
         state_dict = ckp.get('model')
 
