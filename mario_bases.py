@@ -69,7 +69,7 @@ class Mario:
         # EXPLORE
         
         # the command to be funny and work falsely better: 
-        # self.exploration_rate = 0.1
+        # self.exploration_rate = 0.4
         if np.random.rand() < self.exploration_rate:
             action_idx = np.random.randint(self.action_dim)
 
