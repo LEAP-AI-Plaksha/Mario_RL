@@ -36,7 +36,7 @@ env.reset()
 save_dir = Path('checkpoints') / datetime.datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
 save_dir.mkdir(parents=True)
 
-chkpt_path = f"checkpoints/2024-02-14T19-25-56/mario_net_complexmovement_{chkptname}.chkpt"
+chkpt_path = f"checkpoints/2024-02-16T00-42-55/mario_net_complexmovement_{chkptname}.chkpt"
 
 checkpoint = Path(chkpt_path)
 mario = Mario(state_dim=(4, 84, 84), action_dim=env.action_space.n, save_dir=save_dir, checkpoint=checkpoint)

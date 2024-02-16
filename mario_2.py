@@ -67,6 +67,7 @@ class Mario:
         action_idx (int): An integer representing which action Mario will perform
         """
         # EXPLORE
+        # self.exploration_rate = 0.8
         if np.random.rand() < self.exploration_rate:
             action_idx = np.random.randint(self.action_dim)
 
