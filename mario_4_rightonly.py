@@ -9,7 +9,7 @@ import random, datetime, os
 from nes_py.wrappers import JoypadSpace
 import gym_super_mario_bros
 import gym
-from gym_super_mario_bros.actions import SIMPLE_MOVEMENT
+from gym_super_mario_bros.actions import RIGHT_ONLY
 from gym.spaces import Box
 from gym.wrappers import FrameStack
 from tensordict import TensorDict
@@ -25,7 +25,7 @@ print(f"Using MPS: {use_mps}")
 env = gym_super_mario_bros.make(
     "SuperMarioBros-v0", apply_api_compatibility=True, render_mode="rgb_array"
 )
-env = JoypadSpace(env, SIMPLE_MOVEMENT)
+env = JoypadSpace(env, RIGHT_ONLY)
 
 
 class SkipFrame(gym.Wrapper):
@@ -243,7 +243,7 @@ class Mario(Mario):
 class Mario(Mario):
     def save(self):
         save_path = (
-            self.save_dir / f"mario_net_{int(self.curr_step // self.save_every)}.chkpt"
+            self.save_dir / f"mario_net_complexmovement_{int(self.curr_step // self.save_every)}.chkpt"
         )
         torch.save(
             dict(model=self.net.state_dict(), exploration_rate=self.exploration_rate),
