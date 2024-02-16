@@ -26,7 +26,7 @@ class Mario:
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.memory =  TensorDictReplayBuffer(
-            storage=LazyMemmapStorage(100000, device=torch.device("cpu"))
+            storage=LazyMemmapStorage(10000, device=torch.device("cpu"))
         )
         self.batch_size = 32
 
@@ -67,7 +67,9 @@ class Mario:
         action_idx (int): An integer representing which action Mario will perform
         """
         # EXPLORE
-        # self.exploration_rate = 0.8
+        
+        # the command to be funny and work falsely better: 
+        # self.exploration_rate = 0.1
         if np.random.rand() < self.exploration_rate:
             action_idx = np.random.randint(self.action_dim)
 
